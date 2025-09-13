@@ -253,17 +253,9 @@
       smoothTolerance="0.01"
       smoothThreshold="5"
     >
-      <a-entity
-        geometry="primitive: plane; width: 250; height: 134"
-        material="shader: enhanced-video-matte-shader;
-                  videoColor: #videoColor;
-                  videoAlpha: #videoAlpha;
-                  opacity: 1.0;
-                  transparent: true;
-                  alphaTest: 0.1;"
-        position="0 0 0.1"
-        rotation="-90 0 0"
-      ></a-entity>
+      <a-entity position="0 0 0.1">
+        <a-plane color="#CCC" height="250" width="134" rotation="-90 0 0"></a-plane>
+      </a-entity>
     </a-nft>
 
     <!-- Enhanced camera with stabilization -->
