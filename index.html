@@ -1,86 +1,272 @@
-<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <title>ARnft example showing a video</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.5, maximum-scale=1" />
-        <link rel="stylesheet" href="css/nft-style.css" />
-    </head>
+Coding ar
 
-    <body>
-        <a
-            href="https://raw.githack.com/Andre270203/AR_Crab_Backhome/main/marker/AR_Image-tracker_Crab"
-            class="ui marker"
-            target="_blank"
-        >
-            🖼 Marker Image
-        </a>
-        <video loop autoplay muted webkit-playsinline playsinline crossorigin="anonymous" id="arvideo">
-            <source src="https://raw.githack.com/Andre270203/AR_Crab_Backhome/main/AR_Video02_Color.mp4" type="video/mp4" />
-        </video>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Back Home AR Experience - Enhanced</title>
 
-        <script type="importmap">
-            {
-                "imports": {
-                    "three": "./js/third_party/three.js/three.module.min.js",
-                    "arnft-threejs": "./js/ARnftThreejs.module.js",
-                    "arnft": "./../dist/ARnft.module.js"
-                }
-            }
-        </script>
+  <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@1.6.0/dist/aframe-master.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
 
-        <script type="module">
-            import * as THREE from "three";
-            import arnft from "arnft";
-            const { ARnft } = arnft;
-            import ARnftThreejs from "arnft-threejs";
-            const { SceneRendererTJS, NFTaddTJS } = ARnftThreejs;
+  <style>
+    body { margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .arjs-loader {
+      height: 100%; width: 100%; position: absolute; top: 0; left: 0;
+      background: rgba(0,0,0,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;
+      color: #fff; font-size: 1.1em;
+    }
+    .audio-status {
+      position: absolute; bottom: 16px; right: 16px; z-index: 10001;
+      background: rgba(0,0,0,0.8); color: #fff; padding: 8px 12px;
+      border-radius: 20px; font-size: 12px; display: none;
+    }
+    .tap-overlay {
+      position: absolute; inset: 0; display: none; z-index: 10000;
+      background: rgba(0,0,0,0.55); color: #fff; font-weight: 700;
+      align-items: center; justify-content: center; text-align: center; padding: 24px;
+    }
+    .tap-btn {
+      margin-top: 12px; background: #4caf50; color: #fff; border: 0; border-radius: 20px; padding: 10px 18px; font-weight: 700;
+    }
+    .sound-chip {
+      position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+      background: rgba(0,0,0,0.7); color: #fff; padding: 8px 12px; border-radius: 999px; font-size: 14px; z-index: 10001; display: none;
+    }
+  </style>
 
-            let width = 640;
-            let height = 480;
-            ARnft.init(width, height, [["marker/AR_Image-tracker_Crab"]], [["AR_Image-tracker_Crab"]], "config.json", true)
-                .then((nft) => {
-                    document.addEventListener("containerEvent", function (ev) {
-                        let canvas = document.getElementById("canvas");
-                        let fov = (0.8 * 180) / Math.PI;
-                        let ratio = width / height;
-                        let config = {
-                            renderer: {
-                                alpha: true,
-                                antialias: true,
-                                context: null,
-                                precision: "mediump",
-                                premultipliedAlpha: true,
-                                stencil: true,
-                                depth: true,
-                                logarithmicDepthBuffer: true,
-                            },
-                            camera: {
-                                fov: fov,
-                                ratio: ratio,
-                                near: 0.01,
-                                far: 1000,
-                            },
-                        };
+  <script>
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/i.test(navigator.userAgent);
 
-                        let sceneThreejs = new SceneRendererTJS(config, canvas, nft.uuid, true);
-                        sceneThreejs.initRenderer();
+    AFRAME.registerComponent('adaptive-videoplayer', {
+      schema: {
+        width: { type: 'number', default: 300 },
+        height: { type: 'number', default: 150 },
+        volume: { type: 'number', default: 0.8 }
+      },
 
-                        let nftAddTJS = new NFTaddTJS(nft.uuid);
-                        // Set width, height and width and height number of segments of the PlaneGeometry.
-                        let imgConfig = { w: 1, h: 1, ws: 1, hs: 1 };
-                        nftAddTJS.addVideo("arvideo", "AR_Image-tracker_Crab", 180, imgConfig, false);
+      init: function () {
+        const videoColor = document.querySelector('#videoColor');
+        const videoAlpha = document.querySelector('#videoAlpha');
+        const audioStatus = document.getElementById('audioStatus');
+        const tapOverlay = document.getElementById('tapOverlay');
+        const tapBtn = document.getElementById('tapBtn');
+        const soundChip = document.getElementById('soundChip');
 
-                        const tick = () => {
-                            sceneThreejs.draw();
-                            window.requestAnimationFrame(tick);
-                        };
-                        tick();
-                    });
-                })
-                .catch((error) => {
-                    console.log(error);
-                });
-        </script>
-    </body>
+        // Start both muted and paused
+        videoColor.muted = true;
+        videoAlpha.muted = true;
+        videoColor.volume = this.data.volume;
+        videoAlpha.volume = 0; // Alpha video stays silent
+
+        let audioUnlocked = false;
+        let markerVisible = false;
+
+        // Show appropriate UI based on platform
+        if (isIOS) {
+          tapOverlay.style.display = 'flex';
+        } else if (isAndroid) {
+          soundChip.style.display = 'block';
+        }
+
+        // Audio unlock function
+        const enableAudio = () => {
+          audioUnlocked = true;
+          tapOverlay.style.display = 'none';
+          soundChip.style.display = 'none';
+          
+          // If marker is already visible, start playing with audio
+          if (markerVisible) {
+            this.startVideos(true);
+          }
+        };
+
+        // Video control functions
+        this.startVideos = (withAudio = false) => {
+          if (withAudio && audioUnlocked) {
+            videoColor.muted = false;
+            audioStatus.style.display = 'block';
+            audioStatus.textContent = '🔊 Audio ON';
+          } else {
+            videoColor.muted = true;
+            audioStatus.style.display = 'block';
+            audioStatus.textContent = '🔇 Audio OFF - Tap to enable';
+          }
+          
+          videoColor.currentTime = 0;
+          videoAlpha.currentTime = 0;
+          
+          Promise.all([
+            videoColor.play().catch(err => console.log('Color video play failed:', err)),
+            videoAlpha.play().catch(err => console.log('Alpha video play failed:', err))
+          ]);
+        };
+
+        this.stopVideos = () => {
+          if (!videoColor.paused) videoColor.pause();
+          if (!videoAlpha.paused) videoAlpha.pause();
+          audioStatus.style.display = 'none';
+        };
+
+        // Event listeners for audio unlock
+        tapBtn.addEventListener('click', enableAudio, { once: true });
+        tapOverlay.addEventListener('click', enableAudio, { once: true });
+        soundChip.addEventListener('click', enableAudio, { once: true });
+        
+        // Global tap to unlock (for Android convenience)
+        window.addEventListener('touchend', function onFirstTouch() {
+          if (!audioUnlocked && (isAndroid || isIOS)) enableAudio();
+          window.removeEventListener('touchend', onFirstTouch);
+        }, { passive: true });
+
+        // Marker detection handlers - AUDIO ONLY PLAYS WHEN MARKER IS DETECTED
+        this.el.addEventListener('markerFound', () => {
+          markerVisible = true;
+          
+          // Start videos - with audio only if already unlocked
+          this.startVideos(audioUnlocked);
+        });
+
+        this.el.addEventListener('markerLost', () => {
+          markerVisible = false;
+          this.stopVideos();
+        });
+      }
+    });
+
+    // Simple smoothing component
+    AFRAME.registerComponent('smooth-transform', {
+      init: function () {
+        this.lastPos = new THREE.Vector3();
+        this.lastRot = new THREE.Euler();
+        this.smoothFactor = 0.2;
+      },
+
+      tick: function () {
+        if (!this.el.object3D.visible) return;
+
+        const pos = this.el.object3D.position;
+        const rot = this.el.object3D.rotation;
+
+        this.lastPos.lerp(pos, this.smoothFactor);
+        pos.copy(this.lastPos);
+
+        this.lastRot.x += (rot.x - this.lastRot.x) * this.smoothFactor;
+        this.lastRot.y += (rot.y - this.lastRot.y) * this.smoothFactor;
+        this.lastRot.z += (rot.z - this.lastRot.z) * this.smoothFactor;
+        rot.copy(this.lastRot);
+      }
+    });
+  </script>
+</head>
+
+<body style="margin: 0; overflow: hidden;">
+  <div class="arjs-loader" id="loader"><div>Loading, please wait…</div></div>
+
+  <!-- Audio status indicator -->
+  <div class="audio-status" id="audioStatus">🔇 Audio OFF</div>
+
+  <!-- iOS tap-to-start overlay -->
+  <div class="tap-overlay" id="tapOverlay">
+    <div>
+      <div>Tap to enable video & audio<br><small>Audio will only play when marker is detected</small></div>
+      <button class="tap-btn" id="tapBtn">Enable</button>
+    </div>
+  </div>
+  <!-- Android sound chip -->
+  <div class="sound-chip" id="soundChip">🔊 Tap to enable sound</div>
+
+  <a-scene
+    vr-mode-ui="enabled: false;"
+    renderer="logarithmicDepthBuffer: true; precision: medium; antialias: true;"
+    embedded
+    arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; maxDetectionRate: 60;"
+    onloaded="document.getElementById('loader').style.display='none';"
+  >
+    <a-assets>
+      <!-- Videos start muted and paused -->
+      <video
+        id="videoColor"
+        src="https://raw.githack.com/Andre270203/AR_Crab_Backhome/main/AR_Video02_Color.mp4"
+        preload="metadata"
+        loop
+        muted
+        crossorigin="anonymous"
+        webkit-playsinline
+        playsinline
+      ></video>
+
+      <video
+        id="videoAlpha"
+        src="https://raw.githack.com/Andre270203/AR_Crab_Backhome/main/AR_Video02_Alpha.mp4"
+        preload="metadata"
+        loop
+        muted
+        crossorigin="anonymous"
+        webkit-playsinline
+        playsinline
+      ></video>
+    </a-assets>
+
+    <!-- Enhanced shader for better performance -->
+    <script id="matte-shader" type="x-shader/x-fragment">
+      precision mediump float;
+      uniform sampler2D videoColor;
+      uniform sampler2D videoAlpha;
+      uniform float opacity;
+      varying vec2 vUV;
+      void main() {
+        vec4 color = texture2D(videoColor, vUV);
+        vec4 alpha = texture2D(videoAlpha, vUV);
+        // Enhance alpha channel processing for better transparency
+        float alphaValue = alpha.r * opacity;
+        gl_FragColor = vec4(color.rgb, alphaValue);
+      }
+    </script>
+
+    <script>
+      AFRAME.registerShader('enhanced-video-matte-shader', {
+        schema: {
+          videoColor: { type: 'map', is: 'uniform' },
+          videoAlpha: { type: 'map', is: 'uniform' },
+          opacity: { type: 'number', default: 1.0, is: 'uniform' }
+        },
+        fragmentShader: document.getElementById('matte-shader').textContent,
+        vertexShader: `
+          precision mediump float;
+          varying vec2 vUV;
+          void main() {
+            vUV = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `
+      });
+    </script>
+
+    <!-- Enhanced marker with stability improvements -->
+    <a-nft
+      adaptive-videoplayer="width: 300; height: 150; volume: 0.8"
+      smooth-transform
+      type="nft"
+      url="https://raw.githack.com/Andre270203/AR_Crab_Backhome/main/marker/AR_Image-tracker_Crab"
+      smooth="true"
+      smoothCount="20"
+      smoothTolerance="0.01"
+      smoothThreshold="5"
+    >
+      <a-entity position="0 0 0.1">
+        <a-plane color="#CCC" height="250" width="134" rotation="-90 0 0"></a-plane>
+      </a-entity>
+    </a-nft>
+
+    <!-- Enhanced camera with stabilization -->
+    <a-entity 
+      camera 
+      look-controls="enabled: true; reverseMouseDrag: true; touchEnabled: true; magicWindowTrackingEnabled: true"
+      wasd-controls="enabled: false"
+      position="0 0 0"
+    ></a-entity>
+  </a-scene>
+</body>
 </html>
