@@ -171,7 +171,7 @@
     <a-assets>
       <video
         id="videoColor"
-        src="https://raw.githack.com/alevalve/AR_Crab_Backhome/main/AR_Video02_Color.mp4"
+        src="https://raw.githack.com/Andre270203/AR_Crab_Backhome/main/AR_Video02_Color.mp4"
         preload="metadata"
         loop
         muted
@@ -182,7 +182,7 @@
 
       <video
         id="videoAlpha"
-        src="https://raw.githack.com/alevalve/AR_Crab_Backhome/main/AR_Video02_Alpha.mp4"
+        src="https://raw.githack.com/Andre270203/AR_Crab_Backhome/main/AR_Video02_Alpha.mp4"
         preload="metadata"
         loop
         muted
@@ -230,16 +230,16 @@
       id="marker"
       adaptive-videoplayer="width: 300; height: 150; volume: 0.8"
       type="nft"
-      url="https://raw.githack.com/alevalve/AR_Crab_Backhome/main/marker/AR_Image-tracker_Crab"
+      url="https://raw.githack.com/Andre270203/AR_Crab_Backhome/main/marker/AR_Image-tracker_Crab"
       smooth="true"
       smoothCount="30"
-      smoothTolerance="0.01"
+      smoothTolerance="0.06"
       smoothThreshold="5"
       anchor-to-marker="target: #videoPlane"
     >
       <a-entity
         id="videoPlane"
-        geometry="primitive: plane; width: 500; height: 268"
+        geometry="primitive: plane; width: 300; height: 187"
         material="shader: enhanced-video-matte-shader;
                   videoColor: #videoColor;
                   videoAlpha: #videoAlpha;
