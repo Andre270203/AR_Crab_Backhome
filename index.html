@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Back Home AR Experience - Enhanced</title>
+  <title>Back Home AR Experience - Anchored</title>
 
   <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@1.6.0/dist/aframe-master.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
@@ -37,6 +37,7 @@
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isAndroid = /Android/i.test(navigator.userAgent);
 
+    // 🎬 Componente de video adaptativo
     AFRAME.registerComponent('adaptive-videoplayer', {
       schema: {
         width: { type: 'number', default: 300 },
@@ -52,35 +53,30 @@
         const tapBtn = document.getElementById('tapBtn');
         const soundChip = document.getElementById('soundChip');
 
-        // Start both muted and paused
         videoColor.muted = true;
         videoAlpha.muted = true;
         videoColor.volume = this.data.volume;
-        videoAlpha.volume = 0; // Alpha video stays silent
+        videoAlpha.volume = 0;
 
         let audioUnlocked = false;
         let markerVisible = false;
 
-        // Show appropriate UI based on platform
         if (isIOS) {
           tapOverlay.style.display = 'flex';
         } else if (isAndroid) {
           soundChip.style.display = 'block';
         }
 
-        // Audio unlock function
         const enableAudio = () => {
           audioUnlocked = true;
           tapOverlay.style.display = 'none';
           soundChip.style.display = 'none';
           
-          // If marker is already visible, start playing with audio
           if (markerVisible) {
             this.startVideos(true);
           }
         };
 
-        // Video control functions
         this.startVideos = (withAudio = false) => {
           if (withAudio && audioUnlocked) {
             videoColor.muted = false;
@@ -107,22 +103,17 @@
           audioStatus.style.display = 'none';
         };
 
-        // Event listeners for audio unlock
         tapBtn.addEventListener('click', enableAudio, { once: true });
         tapOverlay.addEventListener('click', enableAudio, { once: true });
         soundChip.addEventListener('click', enableAudio, { once: true });
-        
-        // Global tap to unlock (for Android convenience)
+
         window.addEventListener('touchend', function onFirstTouch() {
           if (!audioUnlocked && (isAndroid || isIOS)) enableAudio();
           window.removeEventListener('touchend', onFirstTouch);
         }, { passive: true });
 
-        // Marker detection handlers - AUDIO ONLY PLAYS WHEN MARKER IS DETECTED
         this.el.addEventListener('markerFound', () => {
           markerVisible = true;
-          
-          // Start videos - with audio only if already unlocked
           this.startVideos(audioUnlocked);
         });
 
@@ -133,27 +124,24 @@
       }
     });
 
-    // Simple smoothing component
-    AFRAME.registerComponent('smooth-transform', {
+    // 🎯 Componente Anchor (ancla el plano al marcador)
+    AFRAME.registerComponent('anchor-to-marker', {
+      schema: { target: { type: 'selector' } },
       init: function () {
-        this.lastPos = new THREE.Vector3();
-        this.lastRot = new THREE.Euler();
-        this.smoothFactor = 0.2;
-      },
+        const marker = this.el;
+        const target = this.data.target;
 
-      tick: function () {
-        if (!this.el.object3D.visible) return;
+        if (!target) return;
 
-        const pos = this.el.object3D.position;
-        const rot = this.el.object3D.rotation;
-
-        this.lastPos.lerp(pos, this.smoothFactor);
-        pos.copy(this.lastPos);
-
-        this.lastRot.x += (rot.x - this.lastRot.x) * this.smoothFactor;
-        this.lastRot.y += (rot.y - this.lastRot.y) * this.smoothFactor;
-        this.lastRot.z += (rot.z - this.lastRot.z) * this.smoothFactor;
-        rot.copy(this.lastRot);
+        this.el.sceneEl.addEventListener('renderstart', () => {
+          this.el.sceneEl.addEventListener('tick', () => {
+            if (marker.object3D.visible) {
+              target.object3D.position.copy(marker.object3D.position);
+              target.object3D.rotation.copy(marker.object3D.rotation);
+              target.object3D.scale.copy(marker.object3D.scale);
+            }
+          });
+        });
       }
     });
   </script>
@@ -162,17 +150,15 @@
 <body style="margin: 0; overflow: hidden;">
   <div class="arjs-loader" id="loader"><div>Loading, please wait…</div></div>
 
-  <!-- Audio status indicator -->
   <div class="audio-status" id="audioStatus">🔇 Audio OFF</div>
 
-  <!-- iOS tap-to-start overlay -->
   <div class="tap-overlay" id="tapOverlay">
     <div>
       <div>Tap to enable video & audio<br><small>Audio will only play when marker is detected</small></div>
       <button class="tap-btn" id="tapBtn">Enable</button>
     </div>
   </div>
-  <!-- Android sound chip -->
+
   <div class="sound-chip" id="soundChip">🔊 Tap to enable sound</div>
 
   <a-scene
@@ -183,7 +169,6 @@
     onloaded="document.getElementById('loader').style.display='none';"
   >
     <a-assets>
-      <!-- Videos start muted and paused -->
       <video
         id="videoColor"
         src="https://raw.githack.com/alevalve/AR_Crab_Backhome/main/AR_Video02_Color.mp4"
@@ -207,7 +192,6 @@
       ></video>
     </a-assets>
 
-    <!-- Enhanced shader for better performance -->
     <script id="matte-shader" type="x-shader/x-fragment">
       precision mediump float;
       uniform sampler2D videoColor;
@@ -217,7 +201,6 @@
       void main() {
         vec4 color = texture2D(videoColor, vUV);
         vec4 alpha = texture2D(videoAlpha, vUV);
-        // Enhance alpha channel processing for better transparency
         float alphaValue = alpha.r * opacity;
         gl_FragColor = vec4(color.rgb, alphaValue);
       }
@@ -242,18 +225,20 @@
       });
     </script>
 
-    <!-- Enhanced marker with stability improvements -->
+    <!-- Marcador con Anchor -->
     <a-nft
+      id="marker"
       adaptive-videoplayer="width: 300; height: 150; volume: 0.8"
-      smooth-transform
       type="nft"
       url="https://raw.githack.com/alevalve/AR_Crab_Backhome/main/marker/AR_Image-tracker_Crab"
       smooth="true"
       smoothCount="20"
       smoothTolerance="0.01"
       smoothThreshold="5"
+      anchor-to-marker="target: #videoPlane"
     >
       <a-entity
+        id="videoPlane"
         geometry="primitive: plane; width: 250; height: 134"
         material="shader: enhanced-video-matte-shader;
                   videoColor: #videoColor;
@@ -261,12 +246,11 @@
                   opacity: 1.0;
                   transparent: true;
                   alphaTest: 0.1;"
-        position="140.0 100 0.1"
+        position="0 0 0.1"
         rotation="-90 0 0"
       ></a-entity>
     </a-nft>
 
-    <!-- Enhanced camera with stabilization -->
     <a-entity 
       camera 
       look-controls="enabled: true; reverseMouseDrag: true; touchEnabled: true; magicWindowTrackingEnabled: true"
