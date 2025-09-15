@@ -131,6 +131,16 @@ Modify the plane size in the `<a-plane>` element:
 ```html
 <a-plane width="0.9" height="0.55" ...>
 ```
+
+## Project Structure
+
+```
+backhome_ar_crab/
+├── index.html              # Main AR application
+├── target.mind             # MindAR target image data
+├── AR_Video02_Color.mp4    # Color video track
+└── AR_Video02_Alpha.mp4    # Alpha video track
+```
 ## Troubleshooting
 
 ### AR Tracking Issues
