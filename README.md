@@ -166,5 +166,6 @@ This project uses open-source libraries:
 ## Authors 
 
 - Vivian Mayorga (3D Artist)
-- Alexander Valverde (Developer)
 - André Montoya (Developer)
+- Alexander Valverde (Developer)
+
