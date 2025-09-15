@@ -150,6 +150,7 @@ backhome_ar_crab/
 - Target image should be high contrast and detailed
 - Hold device steady and at appropriate distance
 - Check camera permissions are granted
+- For iOS systems is required touch the screen to activate the sound
 
 ### Performance Issues
 - Use compressed video files
