@@ -10,6 +10,20 @@
 
   <style>
     html, body { margin:0; height:100%; overflow:hidden; background:transparent; }
+
+    #sound-overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.8);
+      color: #fff; font-size: 1.5em; cursor: pointer;
+      z-index: 9999;
+
+      /* Fade-out transition */
+      opacity: 1; transition: opacity 240ms ease;
+    }
+    #sound-overlay.hide {
+      opacity: 0; pointer-events: none;
+    }
   </style>
 
   <script>
@@ -19,22 +33,32 @@
         videoAlpha: { type: 'map', is: 'uniform' },
         opacity:    { type: 'number', default: 1.0, is: 'uniform' }
       },
-      vertexShader: `varying vec2 vUV; void main(){ vUV=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      vertexShader: `
+        varying vec2 vUV;
+        void main(){
+          vUV=uv;
+          gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+        }`,
       fragmentShader: `
-        precision highp float; varying vec2 vUV;
-        uniform sampler2D videoColor, videoAlpha; uniform float opacity;
+        precision highp float;
+        varying vec2 vUV;
+        uniform sampler2D videoColor, videoAlpha;
+        uniform float opacity;
         void main(){
           vec4 c = texture2D(videoColor, vUV);
           float a = texture2D(videoAlpha, vUV).r;
           a = smoothstep(0.15, 0.95, a) * opacity;
           gl_FragColor = vec4(c.rgb, a);
-        }
-      `
+        }`
     });
   </script>
 </head>
 
 <body>
+
+  <!-- Overlay prompt -->
+  <div id="sound-overlay">Tap to activate sound</div>
+
   <a-scene
     mindar-image="imageTargetSrc: https://raw.githack.com/alevalve/backhome_ar_crab/main/targets.mind; autoStart: true"
     color-space="sRGB"
@@ -44,7 +68,6 @@
     embedded
   >
     <a-assets>
-      <!-- Your videos (muted so page can auto-start; will unmute on targetFound) -->
       <video id="videoColor"
              src="https://raw.githack.com/alevalve/backhome_ar_crab/main/AR_Video02_Color.mp4"
              loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
@@ -55,23 +78,26 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Simple target, like the website demo (index 0) -->
     <a-entity id="marker" mindar-image-target="targetIndex: 0">
-      <!-- Show your composited video only when tracked -->
       <a-plane id="videoPlane"
         width="1.0" height="0.55"
         rotation="0 0 0" position="0 0 0"
         visible="false"
-        material="shader: video-matte; videoColor: #videoColor; videoAlpha: #videoAlpha; transparent: true; depthWrite: false">
+        material="shader: video-matte;
+                  videoColor: #videoColor;
+                  videoAlpha: #videoAlpha;
+                  transparent: true;
+                  depthWrite: false">
       </a-plane>
     </a-entity>
   </a-scene>
 
   <script>
-    const marker = document.getElementById('marker');
-    const plane  = document.getElementById('videoPlane');
-    const vc     = document.getElementById('videoColor');
-    const va     = document.getElementById('videoAlpha');
+    const marker  = document.getElementById('marker');
+    const plane   = document.getElementById('videoPlane');
+    const vc      = document.getElementById('videoColor');
+    const va      = document.getElementById('videoAlpha');
+    const overlay = document.getElementById('sound-overlay');
 
     let markerVisible = false;
 
@@ -86,24 +112,23 @@
         if (!markerVisible || !bothRendering()) return;
         vc.muted = false;
         try { await vc.play(); } catch {}
+        overlay.classList.add('hide'); // fade out
         window.removeEventListener('click', handler);
+        window.removeEventListener('touchstart', handler);
       };
-      // One-time-ish, but we remove ourselves after success
-      window.addEventListener('click', handler);
+      window.addEventListener('click', handler, { passive:true });
+      window.addEventListener('touchstart', handler, { passive:true });
     }
 
     marker.addEventListener('targetFound', async () => {
       markerVisible = true;
       plane.setAttribute('visible', true);
 
-
       try { await vc.play(); } catch {}
       try { await va.play(); } catch {}
 
-
       if (bothRendering()) armOneTapUnmute();
       else {
-
         const maybeArm = () => {
           if (bothRendering()) { armOneTapUnmute(); cleanup(); }
         };
@@ -120,7 +145,7 @@
       markerVisible = false;
       plane.setAttribute('visible', false);
       vc.pause(); va.pause();
-      vc.muted = true; 
+      vc.muted = true;
       vc.currentTime = 0; va.currentTime = 0;
     });
   </script>
