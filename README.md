@@ -19,7 +19,7 @@ This AR application uses image tracking to display a transparent video overlay i
 ## Technical Stack
 
 - **A-Frame 1.6.0** - Web framework for building 3D/VR experiences
-- **MindAR 1.2.5** - Computer vision library for AR image tracking
+- **MindAR 1.2.5** - Computer vision library for AR image tracking (detect the marker)
 - **Custom GLSL Shader** - For real-time video alpha compositing
 - **WebRTC** - For camera access and video processing
 
@@ -165,7 +165,7 @@ This project uses open-source libraries:
 
 ## Authors 
 
-- Vivian Mayorga (3D Artist)
+- Vivian Mayorga (Artist/Developer)
 - André Montoya (Developer)
 - Alexander Valverde (Developer)
 
